@@ -1,16 +1,16 @@
 import requests
-import csv
+import pickle
 
 def get_list_of_top_posts(base_url, pages=5, time_range='all'):
     """
-    Function to fetch top posts URLs from Reddit, allowing sorting by time range.
+    Function to fetch top posts from Reddit, allowing sorting by time range.
     
-    :param base_url: 
-    :param pages: 
-    :param time_range: ('all', 'day', 'week', 'month', 'year', 'hour').
-    :return: A list of URLs 
+    :param base_url: Base URL of the Reddit API endpoint.
+    :param pages: Number of pages to fetch (default: 5).
+    :param time_range: Time range for sorting posts ('all', 'day', 'week', 'month', 'year', 'hour').
+    :return: A list of dictionaries containing 'id', 'URL', and 'has_downloaded'.
     """
-    post_urls = []
+    posts = []
     headers = {'User-Agent': 'Mozilla/5.0'}
     after = None
     
@@ -28,7 +28,14 @@ def get_list_of_top_posts(base_url, pages=5, time_range='all'):
         
         data = response.json()
         
-        post_urls.extend([f"https://old.reddit.com{post['data']['permalink']}" for post in data['data']['children']])
+        for post in data['data']['children']:
+            post_id = post['data']['id']
+            post_url = f"https://old.reddit.com{post['data']['permalink']}"
+            posts.append({
+                'id': post_id,
+                'URL': post_url,
+                'has_downloaded': 0  # Initialize to 0
+            })
         
         after = data['data'].get('after')
         
@@ -36,19 +43,22 @@ def get_list_of_top_posts(base_url, pages=5, time_range='all'):
             print("No more pages to fetch.")
             break
         
-    return post_urls
+    return posts
 
-def write_to_csv(post_urls, filename="top_posts.csv"):
-    with open(filename, mode='w', newline='', encoding='utf-8') as file:
-        writer = csv.writer(file)
-        writer.writerow(["Post URL"])
-        for url in post_urls:
-            writer.writerow([url])
+def save_to_pkl(data, filename="top_posts_ck.pkl"):
+    """
+    Save the list of posts to a .pkl file.
     
-    print(f"URLs successfully written to {filename}")
+    :param data: List of dictionaries containing post data.
+    :param filename: Name of the .pkl file to save.
+    """
+    with open(filename, 'wb') as file:
+        pickle.dump(data, file)
+    
+    print(f"Data successfully saved to {filename}")
 
 if __name__ == "__main__":
     base_url = 'https://old.reddit.com/r/NewZealand/top.json'
     time_range = 'all'
     top_posts = get_list_of_top_posts(base_url, pages=10, time_range=time_range)
-    write_to_csv(top_posts, 'top_posts_nz.csv')
+    save_to_pkl(top_posts, 'top_posts_NZ.pkl')
